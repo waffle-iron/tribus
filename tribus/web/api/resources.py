@@ -53,11 +53,11 @@ from django.http.response import Http404
 
 
 from tribus.common.charms.repository import LocalCharmRepository
-from tribus.common.utils import get_path, list_dirs
+from tribus.common.charms.directory import CharmDirectory
+from tribus.common.utils import get_path
 from tribus.config.base import CHARMSDIR
-from tribus.common.charms.url import CharmCollection
 
-
+from tribus.web.api.tasks import queue_charm_deploy
 
 class UserResource(ModelResource):
     user_profile = OneToOneField(
@@ -346,3 +346,18 @@ class CharmConfigResource(Resource):
 
     def obj_get_list(self, bundle, **kwargs):
         return self.get_object_list(bundle)
+    
+    
+class CharmDeployResource(Resource):
+    
+    class Meta:
+        resource_name = 'charms/deploy'
+        object_class = CharmObject
+
+    def detail_uri_kwargs(self, bundle_or_obj):
+        return {}
+
+    def obj_create(self, bundle, **kwargs):
+        queue_charm_deploy.apply_async([bundle.data])
+                
+        return bundle

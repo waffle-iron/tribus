@@ -164,6 +164,7 @@ INSTALLED_APPS = (
     'tribus.web.registration',
     'tribus.web.cloud',
     'tribus.web.profile',
+    'tribus.web.api',
     'ldapdb',
     'django_auth_ldap',
     'djcelery',

@@ -18,10 +18,10 @@ def get_charm_from_path(specification):
     to an implementation and create an instance of the proper type.
     """
     if _is_bundle(specification):
-        from .bundle import CharmBundle
+        from tribus.common.charms.bundle import CharmBundle
         return CharmBundle(specification)
     elif os.path.isdir(specification):
-        from .directory import CharmDirectory
+        from tribus.common.charms.directory import CharmDirectory
         return CharmDirectory(specification)
 
     raise CharmError(

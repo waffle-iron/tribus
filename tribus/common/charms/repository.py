@@ -7,7 +7,7 @@ import urlparse
 import yaml
 
 from tribus.common.charms.provider import get_charm_from_path
-from tribus.common.charms.url import CharmURL, CharmCollection
+from tribus.common.charms.url import CharmURL
 from tribus.common.errors import FileNotFound
 from tribus.common.utils import list_dirs
 from tribus.common import under
@@ -15,7 +15,7 @@ from tribus.common import under
 from tribus.common.charms.errors import (
     CharmNotFound, CharmError, RepositoryNotFound, ServiceConfigValueError)
 
-log = logging.getLogger("tribus.common.charms")
+log = logging.getLogger("tribus")
 
 CS_STORE_URL = "https://store.juju.ubuntu.com"
 
@@ -44,27 +44,24 @@ class LocalCharmRepository(object):
 
 
     def list(self):
-        schema = "local"
-        col = CharmCollection(schema)
         charms = []
         
         for l in list_dirs(self.path):
-            charmurl = CharmURL(col, l, None)
-            charm =  self.find(charmurl)
-            if charm:
+            charm = self.find(CharmURL(l, os.path.basename(l)))
+            if not isinstance(charm, CharmNotFound):
                 charms.append(charm)
         
         return charms
                 
-    def _collection(self, collection):
-        path = os.path.join(self.path, collection.series)
-        if not os.path.exists(path):
+    def _collection(self):
+
+        if not os.path.exists(self.path):
             return
 
-        for dentry in os.listdir(path):
+        for dentry in os.listdir(self.path):
             if dentry.startswith("."):
                 continue
-            dentry_path = os.path.join(path, dentry)
+            dentry_path = os.path.join(self.path, dentry)
             try:
                 yield get_charm_from_path(dentry_path)
             except FileNotFound:
@@ -94,20 +91,12 @@ class LocalCharmRepository(object):
         If multiple charms are found with different versions, the most
         recent one (greatest revision) will be returned.
         """
-        assert charm_url.collection.schema == "local", "schema mismatch"
-        latest = None
-        for charm in self._collection(charm_url.collection):
+        for charm in self._collection():
             if charm.metadata.name == charm_url.name:
-                if charm.get_revision() == charm_url.revision:
-                    return charm
-                if (latest is None or
-                    latest.get_revision() < charm.get_revision()):
-                    latest = charm
+                return charm
 
-        if latest is None or charm_url.revision is not None:
-            return CharmNotFound(self.path, charm_url)
+        return CharmNotFound(self.path, charm_url)
 
-        return latest
 
     def latest(self, charm_url):
         d = self.find(charm_url.with_revision(None))
