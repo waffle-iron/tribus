@@ -282,11 +282,11 @@ class CharmListResource(Resource):
     def get_object_list(self, bundle):
 
         CHARM = LocalCharmRepository(CHARMSDIR)
-                
+
         charms = CHARM.list()
-        
+
         l = []
-        
+
         for ch in charms:
             l.append(ch.metadata.name)
 
@@ -346,10 +346,10 @@ class CharmConfigResource(Resource):
 
     def obj_get_list(self, bundle, **kwargs):
         return self.get_object_list(bundle)
-    
-    
+
+
 class CharmDeployResource(Resource):
-    
+
     class Meta:
         resource_name = 'charms/deploy'
         object_class = CharmObject
@@ -358,6 +358,7 @@ class CharmDeployResource(Resource):
         return {}
 
     def obj_create(self, bundle, **kwargs):
+        print 
         queue_charm_deploy.apply_async([bundle.data])
-                
+
         return bundle

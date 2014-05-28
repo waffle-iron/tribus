@@ -11,9 +11,13 @@ def crypt_password(password):
      salt = salt_chars[randint(0, 63)] + salt_chars[rand_int(0, 63)]
      return crypt(password, salt)
 
-def configure_tribus_sudo():
+def bootstrap():
     with settings(command='echo \'%(user)s ALL= NOPASSWD: ALL\' > /etc/sudoers.d/tribus; chmod 0440 /etc/sudoers.d/tribus'):
         run('%(command)s' % env, capture=False)
+
+def configure_tribus_sudo():
+with settings(command='echo \'%(user)s ALL= NOPASSWD: ALL\' > /etc/sudoers.d/tribus; chmod 0440 /etc/sudoers.d/tribus'):
+   run('%(command)s' % env, capture=False)
 
 def configure_tribus_user():
     with settings(command='adduser --password="%s" tribus' % crypt_password(env.password)):
@@ -37,4 +41,4 @@ def queue_charm_deploy(*args):
         execute(configure_tribus_user)
         execute(configure_tribus_sudo)
 
-    
+    # execute(bootstrap)
