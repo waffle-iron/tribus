@@ -358,7 +358,6 @@ class CharmDeployResource(Resource):
         return {}
 
     def obj_create(self, bundle, **kwargs):
-        print 
         queue_charm_deploy.apply_async([bundle.data])
 
         return bundle

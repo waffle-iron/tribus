@@ -99,6 +99,7 @@ nb-configuration.xml
 
 # SublimeText project files
 *.sublime-workspace
+*.sublime-project
 
 # Eclipse projects
 .settings
