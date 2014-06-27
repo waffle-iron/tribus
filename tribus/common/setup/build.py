@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Desarrolladores de Tribus
+# Copyright (C) 2013-2014 Tribus Developers
 #
 # This file is part of Tribus.
 #
@@ -19,13 +19,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 
 tribus.common.setup.install
 ===========================
 
 
-'''
+"""
 
 import os
 import cssmin
@@ -56,24 +56,13 @@ class build_css(Command):
         pass
 
     def run(self):
-        log.debug(
-            "[%s.%s] Compressing CSS." %
-            (__name__, self.__class__.__name__))
+        log.debug('[%s.%s] Compressing CSS.' % (__name__,
+                                                self.__class__.__name__))
 
-        CSSFULL_DIR = get_path(
-            [BASEDIR,
-             'tribus',
-             'data',
-             'static',
-             'css',
-             'full'])
-        CSSMIN_DIR = get_path(
-            [BASEDIR,
-             'tribus',
-             'data',
-             'static',
-             'css',
-             'min'])
+        CSSFULL_DIR = get_path([BASEDIR, 'tribus', 'data', 'static', 'css',
+                                'full'])
+        CSSMIN_DIR = get_path([BASEDIR, 'tribus', 'data', 'static', 'css',
+                               'min'])
 
         try:
             os.makedirs(CSSMIN_DIR)
@@ -93,7 +82,7 @@ class build_css(Command):
             except Exception as e:
                 print e
 
-            log.debug("[%s.%s] %s > %s." % (__name__, self.__class__.__name__,
+            log.debug('[%s.%s] %s > %s.' % (__name__, self.__class__.__name__,
                                             CSS_FILE, CSSMIN_FILE))
 
 
@@ -178,6 +167,11 @@ class build_sphinx(base_build_sphinx):
     def run(self):
         # for locale in self.get_sphinx_locale_list():
         base_build_sphinx.run(self)
+
+        try:
+            shutil.rmtree(doctreedir)
+        except Exception as e:
+            print e
 
 
 class compile_catalog(base_compile_catalog):

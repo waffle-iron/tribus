@@ -2,23 +2,23 @@
 # -*- coding: utf-8 -*-
 
 from django.http import HttpResponse, HttpResponseRedirect
-
 from django.shortcuts import render, get_object_or_404
 from django.template import RequestContext
 from django.contrib.auth.models import User
 from tribus.web.profile.forms import data_change
 from tribus.web.registration.ldap.utils import edit_ldap_user
+from waffle.decorators import waffle_switch
 
-
+@waffle_switch('profile')
 def SearchProfile(request, nick):
-    '''
+    """
     Vista que busca el perfil de un usuario si existe y lo redirecciona a su muro,
     sino redirecciona al perfil de usuario logeado. En caso de que no este logueado
     redirecciona a la pagina principal.
     
     @param request: request 
     @param nick: string que representa el username del usuario a quien buscas.  
-    '''
+    """
     if request.user.is_authenticated():
         try:
             user = User.objects.get(username=request.user.username)
@@ -53,11 +53,12 @@ def SearchProfile(request, nick):
     return HttpResponseRedirect("/")
 
 
+@waffle_switch('profile')
 def UserProfile(request):
-    '''
+    """
     vista que verifica que maneja la peticion del perfil del usuario logueado,
     incluyendo el manejo del formulario de cambio de datos.
-    '''
+    """
 
     # Cargamos la librería AngujarJS junto con sus plugins
     render_js = ['angular', 'angular.sanitize', 'angular.resource',

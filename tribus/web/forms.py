@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Desarrolladores de Tribus
+# Copyright (C) 2013-2014 Tribus Developers
 #
 # This file is part of Tribus.
 #
@@ -54,7 +54,6 @@ class CommentForm(DocumentForm):
 
     def clean(self):
         cleaned_data = super(CommentForm, self).clean()
-
         for key in cleaned_data.keys():
             stripped_data = strip_tags(cleaned_data[key])
             if unicode(stripped_data).strip():
@@ -66,3 +65,4 @@ class CommentForm(DocumentForm):
             else:
                 raise ValidationError(_('Enter a valid value.'))
         return cleaned_data
+

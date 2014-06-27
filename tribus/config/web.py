@@ -1,13 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import djcelery
-import mongoengine
-import os
-
 from tribus import BASEDIR
 from tribus.common.utils import get_path
-from celery.schedules import crontab
+
+try:
+    import djcelery
+    djcelery.setup_loader()
+except:
+    pass
+
+try:
+    import mongoengine
+    mongoengine.connect(db='tribus')
+except:
+    pass
+
+try:
+
+    from celery.schedules import crontab
+
+    BROKER_URL = 'redis://localhost:6379/0'
+    CELERY_RESULT_BACKEND = 'redis://localhost/0'
+    CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
+
+    CELERYBEAT_SCHEDULE = {
+        "update_cache": {
+            "task": "tribus.web.cloud.tasks.update_cache",
+            "schedule": crontab(minute=0, hour=0), # A las 12 am
+            "args": (),
+        }
+    }
+
+except:
+    pass
 
 try:
     from tribus.config.ldap import *
@@ -125,20 +151,9 @@ API_LIMIT_PER_PAGE = 20
 TASTYPIE_DEFAULT_FORMATS = ['json']
 ACCOUNT_ACTIVATION_DAYS = 7
 
-BROKER_URL = 'redis://localhost:6379/0'
-# Programacion de task para djcelery
-CELERYBEAT_SCHEDULER = "djcelery.schedulers.DatabaseScheduler"
-CELERYBEAT_SCHEDULE = {
-    "update_cache_folder": {
-        "task": "tribus.web.cloud.tasks.update_cache",
-        #"schedule": crontab(minute=0, hour=0), # A las 12 am
-        "schedule": crontab(), # Cada minuto
-        "args": (),
-    },
-}
 
-# Configuracion de haystack
-XAPIAN_INDEX = os.path.join(BASEDIR, 'xapian_index/')
+# CONFIGURACION HAYSTACK CON XAPIAN
+XAPIAN_INDEX = get_path([BASEDIR, 'xapian_index'])
 HAYSTACK_LOGGING = True
 HAYSTACK_CONNECTIONS = {
     'default': {
@@ -149,7 +164,6 @@ HAYSTACK_CONNECTIONS = {
 }
 
 HAYSTACK_SIGNAL_PROCESSOR = 'celery_haystack.signals.CelerySignalProcessor'
-
 
 INSTALLED_APPS = (
     'django.contrib.admin',
@@ -165,17 +179,18 @@ INSTALLED_APPS = (
     'tribus.web.cloud',
     'tribus.web.profile',
     'tribus.web.api',
+    'tribus.web.admin',
     'ldapdb',
     'django_auth_ldap',
-    'djcelery',
     'south',
     'django_static',
+    'djcelery',
     'tastypie',
     'tastypie_mongoengine',
     'haystack',
     'celery_haystack',
     'registration',
-
+    'waffle',
 )
 
 SOUTH_TESTS_MIGRATE = False
@@ -184,10 +199,9 @@ SKIP_SOUTH_TESTS = True
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'django.contrib.staticfiles.finders.FileSystemFinder',
 )
-
 
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
@@ -195,28 +209,29 @@ TEMPLATE_LOADERS = (
 )
 
 MIDDLEWARE_CLASSES = (
-    # 'django.middleware.cache.UpdateCacheMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # 'django.middleware.cache.FetchFromCacheMiddleware',
+    # 'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    # 'django.middleware.cache.FetchFromCacheMiddleware',
+    'waffle.middleware.WaffleMiddleware',
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
+    'django.contrib.messages.context_processors.messages',
     'django.contrib.auth.context_processors.auth',
+    'django.core.context_processors.request',
+    'django.core.context_processors.static',
+    'django.core.context_processors.media',
     'django.core.context_processors.debug',
     'django.core.context_processors.i18n',
-    'django.core.context_processors.media',
-    'django.core.context_processors.static',
     'django.core.context_processors.tz',
-    'django.contrib.messages.context_processors.messages',
     'tribus.web.processors.default_context',
     #'social_auth.context_processors.social_auth_by_type_backends',
 )
-
 
 # SOCIAL_AUTH_PIPELINE = (
 #    'social_auth.backends.pipeline.social.social_auth_user',
@@ -236,21 +251,10 @@ CACHES = {
         'LOCATION': 'localhost:6379:1',
         'OPTIONS': {
             'PARSER_CLASS': 'redis.connection.HiredisParser',
-            "CLIENT_CLASS": "redis_cache.client.DefaultClient",
+            'CLIENT_CLASS': 'redis_cache.client.DefaultClient',
         },
     },
 }
-
-
-try:
-    djcelery.setup_loader()
-except:
-    pass
-
-try:
-    mongoengine.connect(db='tribus')
-except:
-    pass
 
 try:
     from tribus.config.logger import *

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Desarrolladores de Tribus
+# Copyright (C) 2013-2014 Tribus Developers
 #
 # This file is part of Tribus.
 #
@@ -18,23 +18,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 
 Django management script for Tribus
 ===================================
 
 This file is an entry point for managing Tribus in development mode.
 
-'''
+"""
 
 
 if __name__ == "__main__":
 
-    import os
     import sys
-
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tribus.config.web")
-
     from django.core.management import execute_from_command_line
 
     execute_from_command_line(sys.argv)

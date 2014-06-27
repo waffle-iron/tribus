@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Desarrolladores de Tribus
+# Copyright (C) 2013-2014 Tribus Developers
 #
 # This file is part of Tribus.
 #
@@ -26,7 +26,7 @@ def default_context(request):
     return {
         'render_css': ['normalize', 'bootstrap', 'fonts', 'font-awesome',
                        'tribus', 'tribus-responsive'],
-        'render_js': ['angular', 'angular.bootstrap', 'angular.bootstrap',
+        'render_js': ['angular', 'angular.sanitize', 'angular.bootstrap',
                       'angular.resource', 'elements.angular',
                       'controllers.angular', 'services.angular',
                       'search.angular'],

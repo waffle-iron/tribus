@@ -3,6 +3,15 @@ slapd
 ldap-utils
 redis-server
 mongodb-server
-python-xapian
 reprepro
+sudo
+udev
+openssh-server
+python-xapian
+libxml2
+libxslt1.1
+make
+git
 curl
+lsb-release
+ca-certificates

@@ -98,6 +98,7 @@ nb-configuration.xml
 *.rpm
 
 # SublimeText project files
+*.sublime-project
 *.sublime-workspace
 
 # Eclipse projects
@@ -121,3 +122,4 @@ npm-debug.log
 
 # Compiled documentation
 tribus/data/docs/html
+tribus_recorder.log

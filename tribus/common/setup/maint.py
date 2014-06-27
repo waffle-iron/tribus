@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Desarrolladores de Tribus
+# Copyright (C) 2013-2014 Tribus Developers
 #
 # This file is part of Tribus.
 #
@@ -19,17 +19,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-'''
+"""
 
 tribus.common.setup.maint
 =========================
 
 
-'''
+"""
 
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tribus.config.web")
-
 import sys
 import shutil
 from django.conf import settings
@@ -54,10 +52,12 @@ class extract_messages(base_extract_messages):
         outdir = get_path([DOCDIR, 'rst', 'i18n', 'pot'])
         doctreedir = get_path([DOCDIR, 'doctrees'])
         buildername = 'gettext'
-        app = Sphinx(
-            srcdir=srcdir, confdir=srcdir, outdir=outdir, doctreedir=doctreedir,
-            buildername=buildername, confoverrides=None, status=sys.stdout,
-            warning=sys.stderr, freshenv=True, warningiserror=False, tags=None)
+
+        app = Sphinx(srcdir=srcdir, confdir=srcdir, outdir=outdir,
+                     doctreedir=doctreedir, buildername=buildername,
+                     confoverrides=None, status=sys.stdout, warning=sys.stderr,
+                     freshenv=True, warningiserror=False, tags=None)
+
         try:
             app.build(force_all=True)
         except Exception as e:

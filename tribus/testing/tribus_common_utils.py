@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2013 Desarrolladores de Tribus
+# Copyright (C) 2013-2014 Tribus Developers
 #
 # This file is part of Tribus.
 #
@@ -18,19 +18,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 
 tribus.tests.tribus_common_utils
 ================================
 
 These are the tests for the tribus.common.utils module.
 
-'''
+"""
 
 import os
 from django.test import TestCase
 from doctest import DocTestSuite
 from tribus.common import utils
+
 
 class TestIOFunctions(TestCase):
 
@@ -60,23 +61,19 @@ class TestIOFunctions(TestCase):
         touch(self.tmpfile_6)
         ln(self.tmpfile_3, self.tmpfile_4)
 
-
     def tearDown(self):
         from tribus.common.iosync import rmtree
         if os.path.isdir(self.tmpdir):
             rmtree(self.tmpdir)
-
 
     def test_list_files(self):
         from tribus.common.utils import list_files
         self.assertEqual(sorted(list_files(path=self.tmpdir)),
                          sorted(['/tmp/test_io/5.log', '/tmp/test_io/6.py']))
 
-
     def test_list_files_is_file(self):
         from tribus.common.utils import list_files
         self.assertTrue(os.path.isfile(sorted(list_files(path=self.tmpdir))[1]))
-
 
     def test_find_files(self):
         from tribus.common.utils import find_files
@@ -85,12 +82,10 @@ class TestIOFunctions(TestCase):
                                  '/tmp/test_io/2/2.txt',
                                  '/tmp/test_io/2/4.txt']))
 
-
     def test_find_files_is_symlink(self):
         from tribus.common.utils import find_files
         self.assertTrue(os.path.islink(sorted(find_files(path=self.tmpdir,
                                                          pattern='*.txt'))[2]))
-
 
     def test_list_dirs(self):
         from tribus.common.utils import list_dirs
