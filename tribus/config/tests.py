@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # import os
-# import mongoengine
 from tribus import BASEDIR
 from tribus.common.utils import get_path
 
@@ -37,7 +36,7 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django_auth_ldap',
     'django_static',
-    'tribus.testing',
+    'tribus.tests',
     'tribus.web.cloud',
     'south',
     'haystack',
