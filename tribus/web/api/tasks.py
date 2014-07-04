@@ -1,5 +1,5 @@
 from celery import task
-from fabric.api import run, execute, env, settings
+from fabric.api import run, execute, env, settings, sudo
 
 from random import randint
 import crypt
@@ -40,10 +40,60 @@ def has_sudo():
 
 
 def check_docker():
-    # with settings(command='dpkg-query -l <pkgname>', warn_only=True):
-    # Devuelve 0 si el paquete esta instalado, 1 si no
-    with settings(command='dpkg-query -l docker.io', warn_only=True):
+    with settings(command='which docker.io', warn_only=True):
         exit_status = run('%(command)s' % env)
+    return exit_status.return_code
+
+
+def update_packages():
+
+    with settings(command='aptitude update', warn_only=True):
+        exit_status = sudo('%(command)s' % env)
+    return exit_status.return_code
+
+
+def generate_docker_install():
+
+    env.APTGETOPTS = ("-qq -o Apt::Install-Recommends=false "
+        "-o Apt::Get::Assume-Yes=true "
+        "-o Apt::Get::AllowUnauthenticated=true "
+        "-o DPkg::Options::=--force-confmiss "
+        "-o DPkg::Options::=--force-confnew "
+        "-o DPkg::Options::=--force-overwrite "
+        "-o DPkg::Options::=--force-unsafe-io ")
+    env.DEBIAN_MIRROR = "http://http.us.debian.org/debian"
+
+    with settings(command=(
+        'echo "#!/usr/bin/env bash\n'
+        'export DEBIAN_FRONTEND=noninteractive \n'
+        'mv /etc/apt/sources.list /etc/apt/sources.list.bk \n'
+        'mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bk \n'
+        'echo \'deb %(DEBIAN_MIRROR)s wheezy main\' > /etc/apt/sources.list \n'
+        'apt-get %(APTGETOPTS)s update \n'
+        'apt-get %(APTGETOPTS)s install -t wheezy iptables perl libapparmor1 libdevmapper1.02.1 libsqlite3-0 adduser libc6 \n'
+        'echo \'deb %(DEBIAN_MIRROR)s wheezy-backports main\' > /etc/apt/sources.list \n'
+        'apt-get %(APTGETOPTS)s update \n'
+        'apt-get %(APTGETOPTS)s install -t wheezy-backports init-system-helpers fabric \n'
+        'echo \'deb %(DEBIAN_MIRROR)s jessie main\' > /etc/apt/sources.list \n'
+        'apt-get update \n'
+        'apt-get %(APTGETOPTS)s install -t jessie docker.io \n'
+        'mv /etc/apt/sources.list.bk /etc/apt/sources.list \n'
+        'mv /etc/apt/sources.list.d.bk /etc/apt/sources.list.d \n'
+        'apt-get %(APTGETOPTS)s update \n'
+        'exit 0'
+        '" > /tmp/docker_install.sh'
+        ) % env):
+        sudo('%(command)s' % env)
+
+
+def install_docker():
+
+    #env.user = ''
+    #env.password = ''
+
+    with settings(command='export DEBIAN_FRONTEND=noninteractive && aptitude install -y docker.io',
+        warn_only=True):
+        exit_status = sudo('%(command)s' % env)
     return exit_status.return_code
 
 
@@ -52,17 +102,32 @@ def queue_charm_deploy(*args):
 
     env.user = args[0]['user']
     env.password = args[0]['pw']
-    env.hosts = [args[0]['ip']]
+    env.hosts = args[0]['ip']
 
-    docker_exists = execute(check_docker)
+    #docker_exists = execute(check_docker)[env.hosts]
 
-    print ">>>>>", docker_exists
+    execute(generate_docker_install)
 
-    #exit_status = execute(check_for_tribus_user)
+    '''
 
-    #print exit_status
-    #if exit_status.get(env.hosts[0]) != 0:
-    #    execute(configure_tribus_user)
-    #    execute(configure_tribus_sudo)
+    if docker_exists == 0:
+        # Docker existe, puedo proceder a desplegar el contenedor
+        print ">> Docker ya esta instalado, instale el contenedor <<"
+    elif docker_exists == 1:
+        # Docker no existe debo proceder a instalarlo
 
-    # execute(bootstrap)
+        print ">> Docker no esta instalado, instalando... <<"
+        execute(update_packages)
+        docker_installed = execute(install_docker)[env.hosts]
+
+        if docker_installed == 0:
+            # Si docker se instalo correctamente puedo proceder a desplegar
+            # el contenedor
+            print ">> Docker se ha instalado, instale el contenedor <<"
+        else:
+            # Si no se instala correctamente puede deberse a varias razones
+            # - Falta de permisos, - Algun otro error no previsto
+            print ">> Ocurrio un error instalando docker <<"
+            print "El codigo de error es: %s " % docker_installed
+    '''
+
