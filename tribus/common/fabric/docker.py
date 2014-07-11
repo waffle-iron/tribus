@@ -340,6 +340,8 @@ def docker_check_ssh_to_container():
     while True:
         tries += 1
         try:
+            import time
+            time.sleep(2)
             ssh.connect(hostname=env.host_string, port=env.port,
                         username=env.user, password=env.password)
         except Exception, e:

@@ -41,7 +41,7 @@ from tribus.web.models import Trib, Comment
 from tribus.web.cloud.models import Package
 from tribus.web.profile.models import UserProfile
 from tribus.web.forms import TribForm, CommentForm
-from tribus.web.api.tasks import queue_charm_deploy
+from tribus.web.api.tasks import queue_charm_deploy, wipe_host_conts
 
 from tribus.web.api.authorization import (
     TimelineAuthorization,
@@ -383,4 +383,18 @@ class CharmDeployResource(Resource):
     def obj_create(self, bundle, **kwargs):
         queue_charm_deploy.apply_async([bundle.data])
 
+        return bundle
+
+
+class CharmWipeContainers(Resource):
+
+    class Meta:
+        resource_name = 'charms/wipe'
+        object_class = CharmObject
+
+    def detail_uri_kwargs(self, bundle_or_obj):
+        return {}
+
+    def obj_create(self, bundle, **kwargs):
+        wipe_host_conts.apply_async([bundle.data])
         return bundle

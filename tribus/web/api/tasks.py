@@ -1,133 +1,94 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2013-2014 Tribus Developers
+#
+# This file is part of Tribus.
+#
+# Tribus is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Tribus is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from celery import task
-from fabric.api import run, execute, env, settings, sudo
-
-from random import randint
-import crypt
-import string
-
-salt_chars = './' + string.ascii_letters + string.digits
-
-def crypt_password(password):
-    salt = salt_chars[randint(0, 63)] + salt_chars[randint(0, 63)]
-    return crypt(password, salt)
-
-def bootstrap():
-    with settings(command='echo \'%(user)s ALL= NOPASSWD: ALL\' > /etc/sudoers.d/tribus; chmod 0440 /etc/sudoers.d/tribus'):
-        run('%(command)s' % env, capture=False)
+from fabric.api import execute, env
+from tribus.common.fabric.remote import ( check_docker, update_packages,
+    generate_docker_install, install_docker, docker_kill_all_remote_containers,
+    query_host_containers, put_charm_install, create_service_image,
+    get_charm_base_image, stop_service, start_service)
 
 
-def configure_tribus_sudo():
-    with settings(command='echo \'%(user)s ALL= NOPASSWD: ALL\' > /etc/sudoers.d/tribus; chmod 0440 /etc/sudoers.d/tribus'):
-        run('%(command)s' % env, capture=False)
+@task
+def wipe_host_conts(*args):
+    """ For the sake of developer's laziness. """
+    env.user = args[0]['user']
+    env.password = args[0]['pw']
+    env.hosts = args[0]['ip']
+    env.port = 22
+
+    execute(docker_kill_all_remote_containers)
 
 
-def configure_tribus_user():
-    with settings(command='adduser --password="%s" tribus' % crypt_password(env.password)):
-        run('%(command)s' % env, capture=False)
+@task
+def queue_stop_service(*args):
+    env.user = args[0]['user']
+    env.password = args[0]['pw']
+    env.hosts = args[0]['ip']
+    env.port = 22
+    env.charm_name = args[0]['charm_name']
+    env.service_instance = args[0]['service_instance']
+
+    execute(stop_service)
 
 
-def check_for_tribus_user():
-    with settings(command='getent passwd tribus', warn_only=True):
-        exit_status = run('%(command)s' % env)
-    return exit_status.return_code
+@task
+def queue_start_service(*args):
+    env.user = args[0]['user']
+    env.password = args[0]['pw']
+    env.hosts = args[0]['ip']
+    env.port = 22
+    env.charm_name = args[0]['charm_name']
+    env.service_instance = args[0]['service_instance']
 
-
-def has_sudo():
-    #with settings(command='echo "123456" | sudo -v', warn_only=True):
-    with settings(command='ls', warn_only=True):
-        exit_status = run('%(command)s' % env)
-    return exit_status.return_code
-
-
-def check_docker():
-    with settings(command='which docker.io', warn_only=True):
-        exit_status = run('%(command)s' % env)
-    return exit_status.return_code
-
-
-def update_packages():
-
-    with settings(command='aptitude update', warn_only=True):
-        exit_status = sudo('%(command)s' % env)
-    return exit_status.return_code
-
-
-def generate_docker_install():
-
-    env.APTGETOPTS = ("-qq -o Apt::Install-Recommends=false "
-        "-o Apt::Get::Assume-Yes=true "
-        "-o Apt::Get::AllowUnauthenticated=true "
-        "-o DPkg::Options::=--force-confmiss "
-        "-o DPkg::Options::=--force-confnew "
-        "-o DPkg::Options::=--force-overwrite "
-        "-o DPkg::Options::=--force-unsafe-io ")
-    env.DEBIAN_MIRROR = "http://http.us.debian.org/debian"
-
-    with settings(command=(
-        'echo "#!/usr/bin/env bash\n'
-        'export DEBIAN_FRONTEND=noninteractive \n'
-        'mv /etc/apt/sources.list /etc/apt/sources.list.bk \n'
-        'mv /etc/apt/sources.list.d /etc/apt/sources.list.d.bk \n'
-        'echo \'deb %(DEBIAN_MIRROR)s wheezy main\' > /etc/apt/sources.list \n'
-        'apt-get %(APTGETOPTS)s update \n'
-        'apt-get %(APTGETOPTS)s install -t wheezy iptables perl libapparmor1 libdevmapper1.02.1 libsqlite3-0 adduser libc6 \n'
-        'echo \'deb %(DEBIAN_MIRROR)s wheezy-backports main\' > /etc/apt/sources.list \n'
-        'apt-get %(APTGETOPTS)s update \n'
-        'apt-get %(APTGETOPTS)s install -t wheezy-backports init-system-helpers fabric \n'
-        'echo \'deb %(DEBIAN_MIRROR)s jessie main\' > /etc/apt/sources.list \n'
-        'apt-get update \n'
-        'apt-get %(APTGETOPTS)s install -t jessie docker.io \n'
-        'mv /etc/apt/sources.list.bk /etc/apt/sources.list \n'
-        'mv /etc/apt/sources.list.d.bk /etc/apt/sources.list.d \n'
-        'apt-get %(APTGETOPTS)s update \n'
-        'exit 0'
-        '" > /tmp/docker_install.sh'
-        ) % env):
-        sudo('%(command)s' % env)
-
-
-def install_docker():
-
-    #env.user = ''
-    #env.password = ''
-
-    with settings(command='export DEBIAN_FRONTEND=noninteractive && aptitude install -y docker.io',
-        warn_only=True):
-        exit_status = sudo('%(command)s' % env)
-    return exit_status.return_code
+    execute(start_service)
 
 
 @task
 def queue_charm_deploy(*args):
-
     env.user = args[0]['user']
     env.password = args[0]['pw']
     env.hosts = args[0]['ip']
+    env.port = 22
+    env.charm_name = args[0]['charm_name']
 
-    #docker_exists = execute(check_docker)[env.hosts]
-
-    execute(generate_docker_install)
-
-    '''
+    docker_exists = execute(check_docker)[env.hosts]
 
     if docker_exists == 0:
-        # Docker existe, puedo proceder a desplegar el contenedor
-        print ">> Docker ya esta instalado, instale el contenedor <<"
-    elif docker_exists == 1:
-        # Docker no existe debo proceder a instalarlo
+        execute(put_charm_install)
+        execute(create_service_image)
 
-        print ">> Docker no esta instalado, instalando... <<"
-        execute(update_packages)
-        docker_installed = execute(install_docker)[env.hosts]
+    elif docker_exists == 1:
+        script_placed = execute(generate_docker_install)[env.hosts]
+
+        if script_placed == 0:
+            execute(update_packages)
+            docker_installed = execute(install_docker)[env.hosts]
+            execute(get_charm_base_image)
+        else:
+            return
 
         if docker_installed == 0:
-            # Si docker se instalo correctamente puedo proceder a desplegar
-            # el contenedor
-            print ">> Docker se ha instalado, instale el contenedor <<"
-        else:
-            # Si no se instala correctamente puede deberse a varias razones
-            # - Falta de permisos, - Algun otro error no previsto
-            print ">> Ocurrio un error instalando docker <<"
-            print "El codigo de error es: %s " % docker_installed
-    '''
+            execute(put_charm_install)
+            execute(create_service_image)
 
+        else:
+            print "Ocurrio un error, codigo de error es: %s " % docker_installed
+            return
