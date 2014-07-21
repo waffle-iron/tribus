@@ -20,10 +20,15 @@
 
 from celery import task
 from fabric.api import execute, env
-from tribus.common.fabric.remote import ( check_docker, update_packages,
-    generate_docker_install, install_docker, docker_kill_all_remote_containers,
-    query_host_containers, put_charm_install, create_service_image,
-    get_charm_base_image, stop_service, start_service)
+from tribus.common.fabric.remote import (check_docker, update_packages,
+                                         generate_docker_install,
+                                         install_docker,
+                                         docker_kill_all_remote_containers,
+                                         put_charm_install,
+                                         create_service_image,
+                                         get_charm_base_image,
+                                         stop_service, start_service,
+                                         docker_kill_all_remote_images)
 
 
 @task
@@ -35,6 +40,7 @@ def wipe_host_conts(*args):
     env.port = 22
 
     execute(docker_kill_all_remote_containers)
+    execute(docker_kill_all_remote_images)
 
 
 @task
@@ -63,10 +69,10 @@ def queue_start_service(*args):
 
 @task
 def queue_charm_deploy(*args):
+    env.port = 22
     env.user = args[0]['user']
     env.password = args[0]['pw']
     env.hosts = args[0]['ip']
-    env.port = 22
     env.charm_name = args[0]['charm_name']
 
     docker_exists = execute(check_docker)[env.hosts]

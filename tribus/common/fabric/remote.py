@@ -20,55 +20,45 @@
 
 import os
 import json
-import crypt
-import string
-from random import randint
 from contextlib import nested
 from tribus.common.logger import get_logger
-from tribus.common.system import get_local_arch
 from fabric.api import run, env, settings, sudo, hide, put, cd
 
 log = get_logger()
 
 
-def has_sudo():
-    """ . """
-    # with settings(command='echo "123456" | sudo -v', warn_only=True):
-    with settings(command='ls', warn_only=True):
-        exit_status = run('%(command)s' % env)
-    return exit_status.return_code
-
-
 def check_docker():
-    """ . """
     with settings(command='which docker.io', warn_only=True):
         exit_status = run('%(command)s' % env)
     return exit_status.return_code
 
 
 def update_packages():
-    """ . """
     with settings(command='aptitude update', warn_only=True):
         exit_status = sudo('%(command)s' % env)
     return exit_status.return_code
 
 
 def put_charm_install():
-    env.install_path = os.path.join(env.basedir, 'tribus/data/charms',
+    env.install_orig = os.path.join(env.basedir, 'tribus/data/charms',
                                     env.charm_name, 'hooks/install')
-    env.start_path = os.path.join(env.basedir, 'tribus/data/charms',
+    env.start_orig = os.path.join(env.basedir, 'tribus/data/charms',
                                   env.charm_name, 'hooks/start')
-    env.stop_path = os.path.join(env.basedir, 'tribus/data/charms',
+    env.stop_orig = os.path.join(env.basedir, 'tribus/data/charms',
                                  env.charm_name, 'hooks/stop')
 
-    run('mkdir -f /tmp/%(charm_name)s' % env)
+    env.install_dest = os.path.join('/tmp', env.charm_name, 'install')
+    env.start_dest = os.path.join('/tmp', env.charm_name, 'start')
+    env.stop_dest = os.path.join('/tmp', env.charm_name, 'stop')
 
-    put(env.install_path, os.path.join('/tmp', env.charm_name, 'install'))
-    run('chmod +x %s' % os.path.join('/tmp', env.charm_name, 'install'))
-    put(env.start_path, os.path.join('/tmp', env.charm_name, 'start'))
-    run('chmod +x %s' % os.path.join('/tmp', env.charm_name, 'start'))
-    put(env.stop_path, os.path.join('/tmp', env.charm_name, 'stop'))
-    run('chmod +x %s' % os.path.join('/tmp', env.charm_name, 'stop'))
+    run('mkdir /tmp/%(charm_name)s' % env)
+
+    put(env.install_orig, env.install_dest)
+    run('chmod +x %s' %  env.install_dest)
+    put(env.start_orig, env.start_dest)
+    run('chmod +x %s' % env.start_dest)
+    put(env.stop_orig, env.stop_dest)
+    run('chmod +x %s' % env.stop_dest)
 
 
 def generate_docker_install():
@@ -108,43 +98,16 @@ def generate_docker_install():
 
 
 def install_docker():
-    """ . """
     with settings(command='bash /tmp/docker_install.sh', warn_only=True):
         exit_status = sudo('%(command)s' % env)
     return exit_status.return_code
 
 
 def get_charm_base_image():
-    env.arch = get_local_arch()
-    env.debian_base_image = 'luisalejandro/debian-%(arch)s:wheezy' % env
-
+    env.baseimage = 'phusion/baseimage'
     with nested(hide('warnings', 'stderr', 'running'),
         settings(warn_only=True)):
-        sudo(('bash -c ' '"docker.io pull %(debian_base_image)s"') % env)
-
-
-def deploy_service(service_name, instance_number):
-    """
-
-    - Nombre que se le asignara al contenedor
-    - Ruta del volumen de transferencia
-    - Imagen base para despliegue de charms
-    - Script de instalacion del charm
-    - Numero de instancia del servicio
-
-    """
-
-    env.service_name = service_name
-    env.serv_instance_number = instance_number
-    env.mount_place = '/tmp/:/tmp/:rw'
-    env.install_place = '/tmp/install'
-
-    with settings(command='docker.io run -it --name %(service_name)s-'
-                          '%(serv_instance_number)s --volume %(mount_place)s '
-                          '%(debian_base_image)s bash %(install_place)s ',
-        warn_only=True):
-        exit_status = sudo('%(command)s' % env)
-    return exit_status.return_code
+        sudo('bash -c ' '"docker.io pull %(baseimage)s"' % env)
 
 
 def docker_kill_all_remote_containers():
@@ -163,12 +126,19 @@ def docker_kill_all_remote_containers():
 
             if container:
 
-                log.info('Checking if container "%s" exists ...' % container)
+                # log.info('Checking if container "%s" exists ...' % container)
 
-                inspect = json.loads(sudo(('bash -c '
-                                            '"%s inspect %s"') % (env.docker,
-                                                                  container)))
-                if inspect:
+
+                # var = sudo(('bash -c "%s inspect %s"') % (env.docker, container))
+
+                # print var, type(var)
+                # print dir(var)
+
+                # inspect = json.loads(sudo(('bash -c '
+                #                             '"%s inspect %s"') % (env.docker,
+                #                                                   container)))
+                
+                # if inspect:
 
                     log.info('Destroying container "%s" ...' % container)
 
@@ -176,6 +146,38 @@ def docker_kill_all_remote_containers():
                            '"%s stop --time 1 %s"') % (env.docker, container))
                     sudo(('bash -c '
                            '"%s rm -fv %s"') % (env.docker, container))
+
+
+def docker_kill_all_remote_images():
+    """
+    Destroy all Docker images.
+
+    .. versionadded:: 0.2
+    """
+    with hide('warnings', 'stderr', 'running'):
+
+        log.info('Listing available images ...')
+
+        images = sudo(('sudo bash -c "%(docker)s images -aq"') % env,
+                       ).split('\n')
+
+        for image in images:
+
+            if image:
+
+                # log.info('Checking if image "%s" exists ...' % image)
+
+                # inspect = json.loads(sudo(('sudo bash -c '
+                #                             '"%s inspect %s"') % (env.docker,
+                #                                                   image),
+                #                            ))
+                # if inspect:
+
+                    log.info('Destroying image "%s" ...' % image)
+
+                    sudo(('sudo bash -c '
+                           '"%s rmi -f %s"') % (env.docker, image),
+                          )
 
 
 def query_host_containers():
@@ -194,12 +196,12 @@ def query_host_containers():
 
 def query_host_images():
     with hide('warnings', 'stderr', 'running'):
-        containers = sudo(('bash -c "%(docker)s ps -aq"') % env).split('\n')
+        containers = sudo(('bash -c "%(docker)s images -aq"') % env).split('\n')
         container_names = []
         for container in containers:
             if container:
                 inspect = json.loads(sudo(('bash -c '
-                                            '"%s inspect %s"') % (env.docker,
+                                           '"%s inspect %s"') % (env.docker,
                                                                   container)))
                 for cont in inspect:
                     container_names.append(cont['Name'].strip("/"))
@@ -209,8 +211,8 @@ def query_host_images():
 def start_service():
     # Iniciar servcio
     sudo('docker.io run -it --name %(charm_name)s-%(service_instance)s '
-         '--volume %(mount_place)s '
-         '%(charm_name)s-%(service_instance)s bash %(start_place)s && tail -f /dev/null' % env)
+         '--volume %(mount_place)s %(charm_name)s-%(service_instance)s '
+         'bash %(start_place)s && tail -f /dev/null' % env)
 
 
 def stop_service():
@@ -233,14 +235,19 @@ def create_service_image():
     env.install_place = os.path.join('/tmp', env.charm_name, 'install')
     env.start_place = os.path.join('/tmp', env.charm_name, 'start')
     env.stop_place = os.path.join('/tmp', env.charm_name, 'stop')
+    env.baseimage = 'phusion/baseimage'
+    env.charm_apt_deps = 'python-apt python-yaml python-yaml'
+    env.charm_py_deps = 'charmhelpers'
 
     with hide('warnings', 'stderr', 'running'):
         base_exists = sudo('%(docker)s inspect %(charm_name)s-base:base' % env)
         if base_exists.return_code == 1:
-            # Ejecutar script de instalacion
+            # Instalar python en el contenedor y ejecutar script de instalacion
             sudo(command='docker.io run -it --name %(charm_name)s-base '
                  '--volume %(mount_place)s '
-                 '%(debian_base_image)s cd %(charm_place)s && bash ./install ' % env)
+                 '%(baseimage)s bash -c "apt-get update && apt-get install -y '
+                 '%(charm_apt_deps)s && pip install %(charm_py_deps)s && '
+                 'cd %(charm_place)s && ./install "' % env)
 
             # Hacer commit en una imagen
             sudo(command='docker.io commit %(charm_name)s-base '
@@ -251,15 +258,15 @@ def create_service_image():
 
         env.service_base_image = env.charm_name + '-base:base'
         env.instance = 0
-        env.start_script = ''
 
         # Asignar numero de instancia correcto
-        while sudo('%(docker)s inspect %(charm_name)s-%(instance)s' % env).return_code == 0:
+        while sudo('%(docker)s inspect '
+                   '%(charm_name)s-%(instance)s' % env).return_code == 0:
             env.instance += 1
 
         # Hacer correr el contenedor
-
         with cd(env.charm_place):
             sudo('docker.io run -it --name %(charm_name)s-%(instance)s '
                  '--volume %(mount_place)s '
-                 '%(service_base_image)s cd %(charm_place)s && bash ./start && tail -f /dev/null' % env)
+                 '%(service_base_image)s bash -c "cd %(charm_place)s '
+                 '&& ./start && tail -f /dev/null"' % env)
