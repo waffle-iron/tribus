@@ -33,6 +33,7 @@ This module define funtions to accomplish the following tasks:
 """
 
 import sys
+import time
 import json
 import paramiko
 from contextlib import nested
@@ -340,7 +341,10 @@ def docker_check_ssh_to_container():
     while True:
         tries += 1
         try:
+<<<<<<< HEAD
             import time
+=======
+>>>>>>> 72b25acb27830614dc4294542cbef59afa6e193d
             time.sleep(2)
             ssh.connect(hostname=env.host_string, port=env.port,
                         username=env.user, password=env.password)
@@ -414,9 +418,11 @@ def docker_stop_container():
                   capture=True)
 
         if runtime_id:
+            # This way all the dictionary keys are lower case
+            lower_runtime_id = dict([(k.lower(), v) for k, v in runtime_id[0].items()])
 
             local(('sudo bash -c '
-                   '"%s rmi -f %s"') % (env.docker, runtime_id[0]['Id']),
+                   '"%s rmi -f %s"') % (env.docker, lower_runtime_id['id']),
                   capture=True)
 
 
