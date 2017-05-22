@@ -4,6 +4,9 @@
 .. image:: https://badge.waffle.io/TribusGNULinux/tribus.png?label=ready&title=Ready 
  :target: https://waffle.io/TribusGNULinux/tribus?utm_source=badge
  :alt: 'Stories in Ready'
+.. image:: https://badge.waffle.io/TribusGNULinux/tribus.png?label=ready&title=Ready 
+ :target: https://waffle.io/TribusGNULinux/tribus?utm_source=badge
+ :alt: 'Stories in Ready'
 Tribus
 ======
 
